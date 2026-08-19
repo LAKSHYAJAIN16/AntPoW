@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+node/data/*.json
+node/data/logs/
+node/data/net/

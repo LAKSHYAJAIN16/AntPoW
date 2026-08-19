@@ -52,7 +52,11 @@ def summarize_run(df: pd.DataFrame, miners: list[Miner]) -> dict:
         (strategic_reward_share / strategic_hash_share) if strategic_hash_share > 0 else float("nan")
     )
 
-    total_energy = df["total_hash_attempts"].sum() + df["total_aco_iterations"].sum()
+    total_hash_attempts = df["total_hash_attempts"].sum()
+    total_aco_iterations = df["total_aco_iterations"].sum()
+    # weighted by measured relative cost, not raw op counts -- see the
+    # ACO_ITERATION_COST_IN_HASH_ATTEMPTS comment above
+    total_energy = total_hash_attempts + total_aco_iterations * ACO_ITERATION_COST_IN_HASH_ATTEMPTS
     useful_improvement = (df["f_reference"] - df["f_winner"]).clip(lower=0).sum()
     useful_per_joule = useful_improvement / total_energy if total_energy > 0 else 0.0
 
@@ -71,8 +75,8 @@ def summarize_run(df: pd.DataFrame, miners: list[Miner]) -> dict:
         "strategic_hashrate_share": strategic_hash_share,
         "strategic_reward_share": strategic_reward_share,
         "strategic_advantage": strategic_advantage,
-        "total_hash_attempts": df["total_hash_attempts"].sum(),
-        "total_aco_iterations": df["total_aco_iterations"].sum(),
+        "total_hash_attempts": total_hash_attempts,
+        "total_aco_iterations": total_aco_iterations,
         "total_energy_proxy": total_energy,
         "useful_improvement_total": useful_improvement,
         "useful_improvement_per_joule": useful_per_joule,

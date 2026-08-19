@@ -112,6 +112,65 @@ across machines instead of localhost, use `--host 0.0.0.0` on the listener
 and real IPs in `--peers` (make sure the port is reachable — no NAT
 traversal is implemented).
 
+## Deploying a whole toy network with one command
+
+Hand-launching a terminal per node (above) is fine for two nodes and
+tedious past that. `deploy_network.py` starts N node processes at once,
+wires up peering automatically, and gives you a live status table and a
+clean shutdown:
+
+```bash
+cd node
+python deploy_network.py start --nodes 5 --miners 2 --topology mesh \
+    --difficulty-bits 16 --cities 8
+```
+
+This generates a wallet per node (`data/net/walletN.json`), starts each as
+a background process (logs in `data/net/logs/nodeN.log`), and connects them
+per `--topology`:
+
+- `mesh` (default) — each node dials every node started before it, so the
+  network is fully connected from the start. Best for a small toy network.
+- `ring` — each node dials only the previous one; gossip still reaches
+  everyone, but takes a hop or two longer to propagate.
+- `star` — every node dials node 0 directly.
+
+Check on it any time (safe to run repeatedly, doesn't affect the network):
+
+```bash
+python deploy_network.py status
+```
+
+```
+node 0 [MINER] port=7001: height=13 tip=00001814fad7... peers=3 mempool=0
+node 1 [MINER] port=7002: height=13 tip=00001814fad7... peers=3 mempool=0
+node 2 [peer ] port=7003: height=13 tip=00001814fad7... peers=3 mempool=0
+node 3 [peer ] port=7004: height=13 tip=00001814fad7... peers=3 mempool=0
+```
+
+Matching heights and tip hashes across all nodes is exactly what you want
+to see — it means the network reached the same consensus independently on
+each node, not just that it copied a file. Every consensus flag from `run`
+(`--cities`, `--t-opt-frac`, `--lam`, `--difficulty-bits`, etc.) is also a
+flag on `start`, applied uniformly to every node.
+
+Send transactions and check balances against any node in the deployed
+network exactly as in the two-node walkthrough above (`python -m
+antchain_node send/balance --node 127.0.0.1:<port> ...` — ports start at
+`--base-port`, default 7001).
+
+Tear it down:
+
+```bash
+python deploy_network.py stop
+```
+
+This kills every node process and removes the state file; wallets and
+chain data under `data/net/` are left in place, so running `start` again
+reuses the same wallets and resumes each node from its saved chain (every
+node revalidates the whole thing from genesis on load, so this is safe).
+Delete `data/net/chain*.json` first if you want a truly fresh network.
+
 ## CLI reference
 
 | Command | Purpose |
