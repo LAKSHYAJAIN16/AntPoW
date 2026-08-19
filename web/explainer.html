@@ -1,0 +1,700 @@
+<title>AntChain</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page-bg: #f9f9f7;
+    --surface: #fcfcfb;
+    --surface-2: #f2f0e9;
+    --ink: #17150f;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --border: rgba(11,11,11,0.10);
+    --border-strong: rgba(11,11,11,0.18);
+    --accent: #a8641a;
+    --accent-ink: #7a4a12;
+    --accent-soft: #f1e2c9;
+    --on-accent: #fffdf8;
+    --series-shapow: #2a78d6;
+    --series-poao: #eb6834;
+    --series-hybrid: #1baf7a;
+    --critical: #d03b3b;
+    --critical-soft: #fbe4e2;
+    --good: #0ca30c;
+    --shadow-1: 0 1px 2px rgba(20,16,8,0.06), 0 1px 1px rgba(20,16,8,0.04);
+    --shadow-2: 0 8px 24px rgba(20,16,8,0.08), 0 2px 6px rgba(20,16,8,0.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page-bg: #0d0d0c;
+      --surface: #171715;
+      --surface-2: #1e1e1b;
+      --ink: #f5f2ea;
+      --ink-2: #c3c2b7;
+      --muted: #93918a;
+      --border: rgba(255,255,255,0.10);
+      --border-strong: rgba(255,255,255,0.18);
+      --accent: #e3a542;
+      --accent-ink: #f0c17a;
+      --accent-soft: #362a15;
+      --on-accent: #1c1400;
+      --series-shapow: #3987e5;
+      --series-poao: #d95926;
+      --series-hybrid: #199e70;
+      --critical: #e66767;
+      --critical-soft: #3a1c1c;
+      --good: #0ca30c;
+      --shadow-1: 0 1px 2px rgba(0,0,0,0.3);
+      --shadow-2: 0 8px 24px rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page-bg: #0d0d0c;
+    --surface: #171715;
+    --surface-2: #1e1e1b;
+    --ink: #f5f2ea;
+    --ink-2: #c3c2b7;
+    --muted: #93918a;
+    --border: rgba(255,255,255,0.10);
+    --border-strong: rgba(255,255,255,0.18);
+    --accent: #e3a542;
+    --accent-ink: #f0c17a;
+    --accent-soft: #362a15;
+    --on-accent: #1c1400;
+    --series-shapow: #3987e5;
+    --series-poao: #d95926;
+    --series-hybrid: #199e70;
+    --critical: #e66767;
+    --critical-soft: #3a1c1c;
+    --good: #0ca30c;
+    --shadow-1: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-2: 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--page-bg);
+    color: var(--ink);
+    font-family: "Libre Franklin", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 { font-family: "Fraunces", Georgia, "Times New Roman", serif; text-wrap: balance; margin: 0; color: var(--ink); font-weight: 600; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace; }
+
+  a { color: var(--accent-ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:hover { color: var(--accent); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+  .prose { max-width: 680px; }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    padding: 108px 0 84px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero .wrap { position: relative; z-index: 1; }
+  .eyebrow {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 22px;
+  }
+  .eyebrow::before {
+    content: ""; width: 22px; height: 1px; background: var(--accent-ink); opacity: 0.6;
+  }
+  .hero h1 {
+    font-size: clamp(42px, 6.4vw, 74px);
+    line-height: 0.98;
+    letter-spacing: -0.01em;
+  }
+  .hero h1 em { font-style: italic; color: var(--accent-ink); }
+  .hero .thesis {
+    max-width: 640px;
+    margin-top: 26px;
+    font-size: 19px;
+    color: var(--ink-2);
+  }
+  .hero .thesis strong { color: var(--ink); font-weight: 600; }
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 48px;
+    max-width: 720px;
+  }
+  .hero-stat { background: var(--surface); padding: 18px 20px; }
+  .hero-stat .num {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 26px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .hero-stat .lbl { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .trail-svg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; opacity: 0.55; pointer-events: none; }
+  .trail-svg circle { fill: var(--accent); }
+  @media (prefers-reduced-motion: no-preference) {
+    .trail-dot { animation: crawl 14s linear infinite; }
+    .trail-dot:nth-child(2) { animation-duration: 18s; animation-delay: -4s; }
+    .trail-dot:nth-child(3) { animation-duration: 11s; animation-delay: -7s; }
+    .trail-dot:nth-child(4) { animation-duration: 21s; animation-delay: -2s; }
+    @keyframes crawl { to { offset-distance: 100%; } }
+  }
+
+  /* ---------- Sections ---------- */
+  section { padding: 76px 0; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  .section-head { margin-bottom: 36px; }
+  .section-head .eyebrow { margin-bottom: 14px; }
+  .section-head h2 { font-size: clamp(28px, 3.6vw, 38px); }
+  .section-head p { color: var(--ink-2); margin-top: 14px; font-size: 17px; }
+
+  p { margin: 0 0 1.1em; }
+  .prose p:last-child { margin-bottom: 0; }
+
+  /* ---------- Failure-mode cards ---------- */
+  .card-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 8px; }
+  .fcard {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 22px 22px 24px; box-shadow: var(--shadow-1);
+  }
+  .fcard .fnum { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); letter-spacing: 0.06em; }
+  .fcard h3 { font-size: 18px; margin-top: 10px; }
+  .fcard p { color: var(--ink-2); font-size: 15.5px; margin-top: 8px; margin-bottom: 0; }
+
+  /* ---------- Diagram ---------- */
+  figure { margin: 0; }
+  .diagram-frame {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 28px clamp(8px, 3vw, 32px); box-shadow: var(--shadow-2); overflow-x: auto;
+  }
+  figcaption { margin-top: 16px; font-size: 14.5px; color: var(--muted); max-width: 640px; }
+  svg text { fill: currentColor; }
+
+  /* ---------- Charts ---------- */
+  .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 22px 22px 18px; box-shadow: var(--shadow-1);
+  }
+  .chart-card h3 { font-size: 16px; font-family: "Libre Franklin", sans-serif; font-weight: 700; }
+  .chart-card .sub { font-size: 13.5px; color: var(--muted); margin-top: 3px; margin-bottom: 18px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; position: relative; }
+  .bar-row .blabel { width: 108px; flex: 0 0 auto; font-size: 12.5px; color: var(--ink-2); font-family: "JetBrains Mono", monospace; text-align: right; }
+  .bar-track { flex: 1; background: var(--surface-2); border-radius: 4px; height: 20px; position: relative; overflow: visible; }
+  .bar-fill { height: 100%; border-radius: 4px; position: relative; transition: filter 0.15s ease; }
+  .bar-fill:hover { filter: brightness(1.08); }
+  .bar-fill:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .bar-val { position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); font-family: "JetBrains Mono", monospace; font-size: 12.5px; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px 20px; margin-top: 16px; font-size: 12.5px; color: var(--ink-2); }
+  .legend .lk { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .tooltip {
+    position: absolute; bottom: calc(100% + 8px); left: 0; background: var(--ink); color: var(--page-bg);
+    font-size: 12px; padding: 6px 9px; border-radius: 6px; white-space: nowrap; pointer-events: none;
+    opacity: 0; transform: translateY(3px); transition: opacity 0.12s ease, transform 0.12s ease; z-index: 5;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .bar-fill:hover .tooltip, .bar-fill:focus-visible .tooltip { opacity: 1; transform: translateY(0); }
+
+  details.table-toggle { margin-top: 18px; }
+  details.table-toggle summary { cursor: pointer; font-size: 13px; color: var(--accent-ink); font-family: "JetBrains Mono", monospace; }
+  details.table-toggle table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+  details.table-toggle th, details.table-toggle td { text-align: left; padding: 6px 10px 6px 0; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+  details.table-toggle th { color: var(--muted); font-weight: 600; font-family: "JetBrains Mono", monospace; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* ---------- Callouts ---------- */
+  .callout { border-radius: 12px; padding: 20px 22px; display: flex; gap: 14px; border: 1px solid var(--border); margin-top: 28px; }
+  .callout .icon { font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 13px; flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
+  .callout.critical { background: var(--critical-soft); border-color: color-mix(in srgb, var(--critical) 35%, transparent); }
+  .callout.critical .icon { background: var(--critical); color: #fff; }
+  .callout.honest { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+  .callout.honest .icon { background: var(--accent); color: #fff; }
+  .callout p { margin: 0; font-size: 15px; color: var(--ink); }
+  .callout strong { font-weight: 700; }
+
+  /* ---------- Code links ---------- */
+  .repo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  .repo-card {
+    border: 1px solid var(--border); border-radius: 12px; padding: 20px; background: var(--surface);
+    display: flex; flex-direction: column; gap: 6px; box-shadow: var(--shadow-1);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .repo-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-2); }
+  .repo-card .rk { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--accent-ink); text-transform: uppercase; letter-spacing: 0.05em; }
+  .repo-card h3 { font-size: 16.5px; font-family: "Libre Franklin", sans-serif; font-weight: 700; }
+  .repo-card p { font-size: 14px; color: var(--ink-2); margin: 0; }
+
+  footer { padding: 40px 0 70px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: baseline; }
+  footer p { color: var(--muted); font-size: 13.5px; margin: 0; }
+  footer a { color: var(--muted); }
+
+  @media (max-width: 640px) {
+    .hero { padding: 72px 0 56px; }
+    section { padding: 56px 0; }
+    .bar-row .blabel { width: 78px; font-size: 11px; }
+  }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Libre+Franklin:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<article>
+
+  <!-- ============================================================ HERO -->
+  <header class="hero">
+    <svg class="trail-svg" viewBox="0 0 1080 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <path id="trailpath" d="M -40 420 C 180 380, 260 200, 420 220 S 700 380, 860 260 S 1000 60, 1140 90" fill="none" stroke="none"/>
+      <circle class="trail-dot" r="3" style="offset-path: path('M -40 420 C 180 380, 260 200, 420 220 S 700 380, 860 260 S 1000 60, 1140 90');"/>
+      <circle class="trail-dot" r="2.4" style="offset-path: path('M -40 420 C 180 380, 260 200, 420 220 S 700 380, 860 260 S 1000 60, 1140 90');"/>
+      <circle class="trail-dot" r="2" style="offset-path: path('M -40 420 C 180 380, 260 200, 420 220 S 700 380, 860 260 S 1000 60, 1140 90');"/>
+      <circle class="trail-dot" r="2.8" style="offset-path: path('M -40 420 C 180 380, 260 200, 420 220 S 700 380, 860 260 S 1000 60, 1140 90');"/>
+    </svg>
+    <div class="wrap">
+      <div class="eyebrow">Proof-of-Work &middot; Proof-of-Optimization</div>
+      <h1>What if mining a<br><em>block</em> also solved a<br>logistics problem?</h1>
+      <p class="thesis">
+        AntChain is a Bitcoin-style consensus mechanism where every block requires miners to
+        find a good route through a small delivery-style routing problem &mdash; using real
+        ant colony optimization &mdash; <strong>and</strong> a real SHA-256 hash below a target
+        that gets easier the better that route is. This page walks through why that's harder
+        to get right than it sounds, and what actually happened when we built and ran it three
+        separate ways.
+      </p>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="num">~100%</div><div class="lbl">fork rate if you let optimization quality decide the winner outright</div></div>
+        <div class="hero-stat"><div class="num">1,671&times;</div><div class="lbl">real measured cost of one search step vs. one hash attempt</div></div>
+        <div class="hero-stat"><div class="num">3</div><div class="lbl">independent implementations: Python, C++, and a real live network</div></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================ THE TENSION -->
+  <section>
+    <div class="wrap">
+      <div class="section-head prose">
+        <div class="eyebrow">01 &middot; The tension</div>
+        <h2>Bitcoin's uselessness is not an accident</h2>
+        <p>
+          Every SHA-256 hash attempt in Bitcoin mining is an independent coin flip. That
+          sounds wasteful &mdash; and it is &mdash; but it's also precisely what makes the
+          system secure: whoever controls twice the hashrate wins blocks roughly twice as
+          often, with no exceptions for cleverness, luck, or prior knowledge. Replace the
+          coin flip with something that <em>can</em> be gamed &mdash; a computation with
+          memory, or one where being early or clever pays off &mdash; and that clean
+          guarantee is the first thing to go.
+        </p>
+      </div>
+      <div class="prose">
+        <p>
+          Ant Colony Optimization looks like an appealing computation to fold in: it's a
+          population of simulated ants probabilistically building candidate routes,
+          reinforcing the good ones with a shared "pheromone" trail &mdash; genuinely useful
+          work, and naturally distributed, almost like a mining swarm already. The catch is
+          in that word <em>reinforcing</em>: a pheromone trail is memory. A miner who has
+          searched longer, or who reuses a trail from a similar problem, carries a real
+          advantage into the next attempt. Memory is exactly what a hash coin-flip is
+          designed not to have.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ WHY NAIVE POAO FAILS -->
+  <section>
+    <div class="wrap">
+      <div class="section-head prose">
+        <div class="eyebrow">02 &middot; The naive version</div>
+        <h2>Just let the best route win? It breaks three ways.</h2>
+        <p>The obvious design &mdash; first miner to submit a good-enough route wins the block, no hashing at all &mdash; fails for three separate reasons.</p>
+      </div>
+      <div class="card-row">
+        <div class="fcard">
+          <div class="fnum">FAILURE 01</div>
+          <h3>Private knowledge</h3>
+          <p>A miner who solved a similar instance before, or hears about a new block a few milliseconds early, starts the next round already ahead &mdash; with no way for anyone else to tell.</p>
+        </div>
+        <div class="fcard">
+          <div class="fnum">FAILURE 02</div>
+          <h3>Pheromone memory</h3>
+          <p>Within a single round, early progress compounds: a colony that stumbles onto a good partial route reinforces it, making further improvement cheaper for whoever's already ahead. Hash search has no such rich-get-richer effect.</p>
+        </div>
+        <div class="fcard">
+          <div class="fnum">FAILURE 03</div>
+          <h3>Strategic withholding</h3>
+          <p>Find a great route early? Sit on it until the last possible moment to deny everyone else time to react. There's no proof of elapsed effort attached &mdash; only proof of quality &mdash; so waiting is nearly free.</p>
+        </div>
+      </div>
+      <div class="callout critical">
+        <div class="icon">!</div>
+        <p>We didn't just argue this &mdash; we measured it. Across every population size and setting we tested, letting solution quality decide the winner outright produced a fork on <strong>essentially every single block.</strong> See the data in section 04.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ MECHANISM DIAGRAM -->
+  <section>
+    <div class="wrap">
+      <div class="section-head prose">
+        <div class="eyebrow">03 &middot; The mechanism</div>
+        <h2>Let quality bias the lottery. Don't let it replace the lottery.</h2>
+        <p>
+          The fix keeps the hash coin-flip as the thing that actually grants a block &mdash;
+          preserving Bitcoin's security argument &mdash; while making the <em>difficulty of
+          that coin-flip</em> a continuous function of how good a miner's route is. A better
+          route buys more lottery tickets. It never buys the block outright.
+        </p>
+      </div>
+
+      <figure class="diagram-frame">
+        <svg viewBox="0 0 920 560" role="img" aria-label="Flow diagram: the previous block's hash deterministically generates a new routing-problem instance; miners search it with ant colony optimization; a candidate route must clear a quality gate; the quality-weighted target then determines a hash lottery; a winning hash produces the next block, whose hash restarts the cycle. A dashed bypass shows that plain SHA-PoW skips the search and gate entirely and hashes at a fixed target.">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
+            </marker>
+            <marker id="arrowMuted" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" opacity="0.45"/>
+            </marker>
+          </defs>
+          <g font-family="JetBrains Mono, monospace" font-size="12.5">
+            <!-- prev block hash -->
+            <rect x="330" y="16" width="260" height="44" rx="8" fill="none" stroke="currentColor" stroke-width="1.3"/>
+            <text x="460" y="43" text-anchor="middle">prev block hash H(block&#8320;)</text>
+
+            <line x1="460" y1="60" x2="460" y2="96" stroke="currentColor" stroke-width="1.3" marker-end="url(#arrow)"/>
+            <text x="478" y="82" font-size="11.5" fill="currentColor" opacity="0.75">Gen(H) &rarr; new instance</text>
+
+            <!-- instance -->
+            <rect x="345" y="96" width="230" height="42" rx="8" fill="none" stroke="currentColor" stroke-width="1.3"/>
+            <text x="460" y="122" text-anchor="middle">routing instance I</text>
+
+            <line x1="460" y1="138" x2="460" y2="172" stroke="currentColor" stroke-width="1.3" marker-end="url(#arrow)"/>
+
+            <!-- ACO search, three parallel miners -->
+            <g>
+              <rect x="120" y="172" width="200" height="56" rx="8" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.9"/>
+              <text x="220" y="196" text-anchor="middle" opacity="0.9">miner A: ACO search</text>
+              <text x="220" y="212" text-anchor="middle" font-size="11" opacity="0.6">independent, in parallel</text>
+
+              <rect x="360" y="172" width="200" height="56" rx="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+              <text x="460" y="196" text-anchor="middle">miner B: ACO search</text>
+              <text x="460" y="212" text-anchor="middle" font-size="11" opacity="0.6">pheromone trail, this block only</text>
+
+              <rect x="600" y="172" width="200" height="56" rx="8" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.9"/>
+              <text x="700" y="196" text-anchor="middle" opacity="0.9">miner C: ACO search</text>
+              <text x="700" y="212" text-anchor="middle" font-size="11" opacity="0.6">independent, in parallel</text>
+            </g>
+
+            <line x1="460" y1="228" x2="460" y2="262" stroke="currentColor" stroke-width="1.3" marker-end="url(#arrow)"/>
+
+            <!-- candidate solution -->
+            <rect x="345" y="262" width="230" height="42" rx="8" fill="none" stroke="currentColor" stroke-width="1.3"/>
+            <text x="460" y="288" text-anchor="middle">candidate route x, length f(x)</text>
+
+            <line x1="460" y1="304" x2="460" y2="338" stroke="currentColor" stroke-width="1.3" marker-end="url(#arrow)"/>
+
+            <!-- quality gate diamond -->
+            <polygon points="460,338 560,376 460,414 360,376" fill="none" stroke="currentColor" stroke-width="1.3"/>
+            <text x="460" y="372" text-anchor="middle">f(x) &le; T</text>
+            <text x="460" y="386" text-anchor="middle">opt</text>
+            <text x="460" y="400" text-anchor="middle" font-size="11" opacity="0.6">quality gate</text>
+
+            <!-- fail loop back -->
+            <path d="M 360 376 C 260 376, 240 260, 300 210" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.55" marker-end="url(#arrowMuted)"/>
+            <text x="230" y="300" font-size="11" opacity="0.65" transform="rotate(-90 230 300)">no &mdash; keep searching</text>
+
+            <line x1="460" y1="414" x2="460" y2="446" stroke="currentColor" stroke-width="1.3" marker-end="url(#arrow)"/>
+            <text x="486" y="434" font-size="11" opacity="0.7">yes</text>
+
+            <!-- quality-weighted target -->
+            <rect x="290" y="446" width="340" height="44" rx="8" fill="none" style="stroke:var(--accent)" stroke-width="1.6"/>
+            <text x="460" y="473" text-anchor="middle" style="fill:var(--accent)">T(x) = T&#8320; &middot; (1 + &lambda;&middot;&Delta;f/f_ref)</text>
+
+            <line x1="460" y1="490" x2="460" y2="522" stroke="currentColor" stroke-width="1.3" marker-end="url(#arrow)"/>
+
+            <!-- hash lottery -->
+            <rect x="330" y="522" width="260" height="38" rx="8" style="fill:var(--accent);stroke:var(--accent)" stroke-width="1.3"/>
+            <text x="460" y="546" text-anchor="middle" style="fill:var(--on-accent)">hash lottery: SHA-256 &lt; T(x)</text>
+
+            <!-- plain SHA-PoW bypass -->
+            <path d="M 590 38 C 780 38, 800 500, 610 540" fill="none" stroke="currentColor" stroke-width="1.1" stroke-dasharray="5 4" opacity="0.5" marker-end="url(#arrowMuted)"/>
+            <text x="812" y="270" font-size="11" opacity="0.65" text-anchor="middle" transform="rotate(90 812 270)">plain SHA-PoW: skips search &amp;</text>
+            <text x="835" y="270" font-size="11" opacity="0.65" text-anchor="middle" transform="rotate(90 835 270)">gate, hashes at a fixed target</text>
+          </g>
+        </svg>
+        <figcaption>
+          Three miners search the same instance independently (miner B shown mid-search,
+          keeping pheromone state only for this block). A route must clear the quality gate
+          before it's eligible to hash at all; clearing it doesn't win the block &mdash; it
+          only sets an easier-or-harder target for that miner's own hash attempts. The dashed
+          path shows what plain SHA-PoW skips: no search, no gate, a fixed target throughout.
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ============================================================ RESULTS -->
+  <section>
+    <div class="wrap">
+      <div class="section-head prose">
+        <div class="eyebrow">04 &middot; What we actually found</div>
+        <h2>Three implementations, real numbers</h2>
+        <p>
+          We tested this at three levels: a Python simulator for broad sweeps, a C++
+          reimplementation fast enough to run <span class="mono">200 miners &times; 2,000
+          blocks</span> per condition in about 25 seconds, and a real multi-node network with
+          actual SHA-256 mining and ECDSA-signed transactions. The charts below use the
+          large-scale C++ run &mdash; the numbers are real output, not illustrations.
+        </p>
+      </div>
+
+      <div class="chart-grid">
+        <!-- CHART 1: fork rate -->
+        <div class="chart-card">
+          <h3>Fork rate</h3>
+          <div class="sub">share of blocks with a competing valid block &middot; 200 miners, 2,000 blocks</div>
+          <div class="bar-row">
+            <div class="blabel">sha_pow</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:8.5%;background:var(--series-shapow)">
+              <span class="tooltip">SHA-PoW &middot; 8.5%</span></div><span class="bar-val">8.5%</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">pure_poao</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:100%;background:var(--series-poao)">
+              <span class="tooltip">pure PoAO &middot; 100.0%</span></div><span class="bar-val">100.0%</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">hybrid &lambda;=0.5</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:6.1%;background:var(--series-hybrid)">
+              <span class="tooltip">hybrid &lambda;=0.5 &middot; 6.1%</span></div><span class="bar-val">6.1%</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">hybrid &lambda;=1</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:6.9%;background:var(--series-hybrid)">
+              <span class="tooltip">hybrid &lambda;=1 &middot; 6.9%</span></div><span class="bar-val">6.9%</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">hybrid &lambda;=3</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:7.0%;background:var(--series-hybrid)">
+              <span class="tooltip">hybrid &lambda;=3 &middot; 7.0%</span></div><span class="bar-val">7.0%</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">hybrid &lambda;=10</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:6.6%;background:var(--series-hybrid)">
+              <span class="tooltip">hybrid &lambda;=10 &middot; 6.6%</span></div><span class="bar-val">6.6%</span></div>
+          </div>
+          <div class="legend">
+            <span class="lk"><span class="sw" style="background:var(--series-shapow)"></span>SHA-PoW</span>
+            <span class="lk"><span class="sw" style="background:var(--series-poao)"></span>pure PoAO</span>
+            <span class="lk"><span class="sw" style="background:var(--series-hybrid)"></span>hybrid (4 &lambda; values)</span>
+          </div>
+          <details class="table-toggle">
+            <summary>View as table</summary>
+            <table>
+              <thead><tr><th>Condition</th><th>Fork rate</th></tr></thead>
+              <tbody>
+                <tr><td>sha_pow</td><td>0.085</td></tr>
+                <tr><td>pure_poao</td><td>1.000</td></tr>
+                <tr><td>hybrid (&lambda;=0.5)</td><td>0.061</td></tr>
+                <tr><td>hybrid (&lambda;=1)</td><td>0.069</td></tr>
+                <tr><td>hybrid (&lambda;=3)</td><td>0.070</td></tr>
+                <tr><td>hybrid (&lambda;=10)</td><td>0.066</td></tr>
+              </tbody>
+            </table>
+          </details>
+        </div>
+
+        <!-- CHART 2: useful work per joule -->
+        <div class="chart-card">
+          <h3>Useful optimization per unit compute</h3>
+          <div class="sub">route improvement over cheap heuristic &divide; weighted energy &middot; &times;10&#8315;&#8310;</div>
+          <div class="bar-row">
+            <div class="blabel">sha_pow</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:0.5%;background:var(--series-shapow)">
+              <span class="tooltip">SHA-PoW &middot; 0 (no search at all)</span></div><span class="bar-val">0</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">pure_poao</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:100%;background:var(--series-poao)">
+              <span class="tooltip">pure PoAO &middot; 4.71</span></div><span class="bar-val">4.71</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">hybrid &lambda;=0.5</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:40.8%;background:var(--series-hybrid)">
+              <span class="tooltip">hybrid &lambda;=0.5 &middot; 1.92 (41% of pure PoAO)</span></div><span class="bar-val">1.92</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">hybrid &lambda;=1</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:41.3%;background:var(--series-hybrid)">
+              <span class="tooltip">hybrid &lambda;=1 &middot; 1.95 (41% of pure PoAO)</span></div><span class="bar-val">1.95</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">hybrid &lambda;=3</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:43.3%;background:var(--series-hybrid)">
+              <span class="tooltip">hybrid &lambda;=3 &middot; 2.04 (43% of pure PoAO)</span></div><span class="bar-val">2.04</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">hybrid &lambda;=10</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:44.8%;background:var(--series-hybrid)">
+              <span class="tooltip">hybrid &lambda;=10 &middot; 2.11 (45% of pure PoAO)</span></div><span class="bar-val">2.11</span></div>
+          </div>
+          <div class="legend">
+            <span class="lk"><span class="sw" style="background:var(--series-shapow)"></span>SHA-PoW</span>
+            <span class="lk"><span class="sw" style="background:var(--series-poao)"></span>pure PoAO</span>
+            <span class="lk"><span class="sw" style="background:var(--series-hybrid)"></span>hybrid (4 &lambda; values)</span>
+          </div>
+          <details class="table-toggle">
+            <summary>View as table</summary>
+            <table>
+              <thead><tr><th>Condition</th><th>Per joule (&times;10&#8315;&#8310;)</th><th>% of pure PoAO</th></tr></thead>
+              <tbody>
+                <tr><td>sha_pow</td><td>0.00</td><td>&mdash;</td></tr>
+                <tr><td>pure_poao</td><td>4.71</td><td>100%</td></tr>
+                <tr><td>hybrid (&lambda;=0.5)</td><td>1.92</td><td>41%</td></tr>
+                <tr><td>hybrid (&lambda;=1)</td><td>1.95</td><td>41%</td></tr>
+                <tr><td>hybrid (&lambda;=3)</td><td>2.04</td><td>43%</td></tr>
+                <tr><td>hybrid (&lambda;=10)</td><td>2.11</td><td>45%</td></tr>
+              </tbody>
+            </table>
+          </details>
+        </div>
+
+        <!-- CHART 3: fairness gap -->
+        <div class="chart-card" style="grid-column: 1 / -1;">
+          <h3>Reward inequality beyond what hashrate alone predicts</h3>
+          <div class="sub">Gini(rewards) &minus; Gini(hashrate share) &middot; 0 = perfectly work-proportional</div>
+          <div class="bar-row">
+            <div class="blabel">sha_pow</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:26.8%;background:var(--series-shapow)">
+              <span class="tooltip">SHA-PoW &middot; 0.104</span></div><span class="bar-val">0.104</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">pure_poao</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:99.7%;background:var(--series-poao)">
+              <span class="tooltip">pure PoAO &middot; 0.387</span></div><span class="bar-val">0.387</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">hybrid &lambda;=0.5</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:96.5%;background:var(--series-hybrid)">
+              <span class="tooltip">hybrid &lambda;=0.5 &middot; 0.374</span></div><span class="bar-val">0.374</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">hybrid &lambda;=1</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:96.1%;background:var(--series-hybrid)">
+              <span class="tooltip">hybrid &lambda;=1 &middot; 0.373</span></div><span class="bar-val">0.373</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">hybrid &lambda;=3</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:96.8%;background:var(--series-hybrid)">
+              <span class="tooltip">hybrid &lambda;=3 &middot; 0.375</span></div><span class="bar-val">0.375</span></div>
+          </div>
+          <div class="bar-row">
+            <div class="blabel">hybrid &lambda;=10</div>
+            <div class="bar-track"><div class="bar-fill" tabindex="0" style="width:97.5%;background:var(--series-hybrid)">
+              <span class="tooltip">hybrid &lambda;=10 &middot; 0.378</span></div><span class="bar-val">0.378</span></div>
+          </div>
+          <div class="legend">
+            <span class="lk"><span class="sw" style="background:var(--series-shapow)"></span>SHA-PoW</span>
+            <span class="lk"><span class="sw" style="background:var(--series-poao)"></span>pure PoAO</span>
+            <span class="lk"><span class="sw" style="background:var(--series-hybrid)"></span>hybrid (4 &lambda; values)</span>
+          </div>
+          <details class="table-toggle">
+            <summary>View as table</summary>
+            <table>
+              <thead><tr><th>Condition</th><th>Gini(rewards)</th><th>Gini(hashrate)</th><th>Excess</th></tr></thead>
+              <tbody>
+                <tr><td>sha_pow</td><td>0.702</td><td>0.598</td><td>0.104</td></tr>
+                <tr><td>pure_poao</td><td>0.985</td><td>0.598</td><td>0.387</td></tr>
+                <tr><td>hybrid (&lambda;=0.5)</td><td>0.972</td><td>0.598</td><td>0.374</td></tr>
+                <tr><td>hybrid (&lambda;=1)</td><td>0.971</td><td>0.598</td><td>0.373</td></tr>
+                <tr><td>hybrid (&lambda;=3)</td><td>0.973</td><td>0.598</td><td>0.375</td></tr>
+                <tr><td>hybrid (&lambda;=10)</td><td>0.976</td><td>0.598</td><td>0.378</td></tr>
+              </tbody>
+            </table>
+          </details>
+        </div>
+      </div>
+
+      <div class="callout honest">
+        <div class="icon">i</div>
+        <p>
+          <strong>The honest part.</strong> We expected hybrid's fairness gap to sit near
+          SHA-PoW's (0.10) and land somewhere between it and pure PoAO's (0.39) depending on
+          &lambda;. Instead, at 200 miners, it sits right next to pure PoAO's &mdash;
+          <strong>regardless of &lambda;.</strong> The reason: a miner's search budget is
+          proportional to its hashrate share, so under a realistic (heavy-tailed) hashrate
+          distribution, most low-share miners never accumulate enough search iterations to
+          even <em>qualify</em> a route &mdash; they're excluded before the hash lottery ever
+          runs, and no amount of &lambda;-tuning fixes an exclusion that happens upstream of
+          it. This only showed up once the C++ implementation made a 200-miner sweep fast
+          enough to run; it's invisible at 20&ndash;30 miners. It's now the paper's main open
+          problem.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ REPO / TRY IT -->
+  <section>
+    <div class="wrap">
+      <div class="section-head prose">
+        <div class="eyebrow">05 &middot; The code</div>
+        <h2>Three implementations, one mechanism</h2>
+        <p>Everything on this page is generated from real, runnable code &mdash; not a mockup.</p>
+      </div>
+      <div class="repo-grid">
+        <div class="repo-card">
+          <div class="rk">paper/</div>
+          <h3>The spec</h3>
+          <p>Full mechanism design, security analysis, and the results in this page, written up as a LaTeX paper.</p>
+        </div>
+        <div class="repo-card">
+          <div class="rk">sim/</div>
+          <h3>Python simulator</h3>
+          <p>Fast probabilistic simulator for broad parameter sweeps across &lambda;, quality thresholds, and population shape.</p>
+        </div>
+        <div class="repo-card">
+          <div class="rk">cpp/</div>
+          <h3>C++ simulator</h3>
+          <p>Dependency-free reimplementation built for throughput &mdash; 200 miners &times; 2,000 blocks &times; 6 conditions in ~25 seconds, with its own test suite.</p>
+        </div>
+        <div class="repo-card">
+          <div class="rk">node/</div>
+          <h3>Real toy blockchain</h3>
+          <p>Actual SHA-256 mining, real ECDSA-signed transactions, a real TCP gossip network. Deploy a multi-node network with one command.</p>
+        </div>
+      </div>
+      <p style="margin-top:28px; font-size: 14.5px; color: var(--muted);">
+        Source: <a href="https://github.com/LAKSHYAJAIN16/AntPoW" class="mono">github.com/LAKSHYAJAIN16/AntPoW</a>
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <p>AntChain &middot; a research project, not a currency. Educational / research use only.</p>
+      <p>Data on this page from <span class="mono">results/cpp_summary.csv</span>, this repository.</p>
+    </div>
+  </footer>
+
+</article>
