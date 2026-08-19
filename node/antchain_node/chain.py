@@ -32,7 +32,6 @@ class Blockchain:
         self.blocks: list[Block] = [genesis_block()]
         self.balances: dict[str, float] = {}
         self.nonces: dict[str, int] = {}
-        self._targets: list[int] = []  # targets[i] = target used to mine blocks[i+1]
 
     # ---------------------------------------------------------------- misc
     @property
@@ -43,29 +42,36 @@ class Blockchain:
     def tip(self) -> Block:
         return self.blocks[-1]
 
-    def target_at(self, height: int) -> int:
-        """Target required to mine the block at `height` (height >= 1)."""
-        idx = height - 1
-        if idx < len(self._targets):
-            return self._targets[idx]
-        return self.params.initial_target()
-
-    def next_target(self) -> int:
-        return self.target_at(self.height + 1)
-
     # ------------------------------------------------------------- replay
-    def _recompute_targets(self, blocks: list[Block]) -> list[int]:
+    def compute_targets(self, blocks: list[Block]) -> tuple[list[int], int]:
+        """Replays retargeting from genesis over `blocks`. Returns
+        (targets_used_for_blocks[1:], target_for_the_block_after_the_last).
+
+        This is the ONLY place difficulty is computed, used identically by
+        the live single-block mining path (try_extend, via next_target())
+        and the full-chain catch-up path (validate_full_chain). They used to
+        be two separate implementations that silently disagreed once a node
+        fell behind and needed to validate historical blocks retroactively
+        -- validate_full_chain applied retargeting, but next_target() never
+        did, so every block after the first retarget boundary looked invalid
+        to a node that had to catch up, permanently stalling it.
+        """
         targets = []
         t = self.params.initial_target()
         for i in range(1, len(blocks)):
             targets.append(t)
-            if i % self.params.retarget_interval == 0 and i >= self.params.retarget_interval:
+            if i % self.params.retarget_interval == 0:
                 start = blocks[i - self.params.retarget_interval]
                 end = blocks[i]
                 actual = end.timestamp - start.timestamp
                 expected = self.params.retarget_interval * self.params.target_block_time
                 t = retarget(t, actual, expected)
-        return targets
+        return targets, t
+
+    def next_target(self) -> int:
+        with self.lock:
+            _, t = self.compute_targets(self.blocks)
+            return t
 
     @staticmethod
     def cumulative_work(targets: list[int]) -> int:
@@ -128,7 +134,7 @@ class Blockchain:
             raise ChainError("bad or missing genesis block")
         balances: dict[str, float] = {}
         nonces: dict[str, int] = {}
-        targets = self._recompute_targets(blocks)
+        targets, _ = self.compute_targets(blocks)
         for i in range(1, len(blocks)):
             self.validate_block(blocks[i], blocks[i - 1], targets[i - 1], balances, nonces)
         return balances, nonces, targets
@@ -143,7 +149,6 @@ class Blockchain:
             nonces = dict(self.nonces)
             self.validate_block(block, self.tip, target, balances, nonces)
             self.blocks.append(block)
-            self._targets.append(target)
             self.balances = balances
             self.nonces = nonces
             self._persist()
@@ -154,10 +159,10 @@ class Blockchain:
         strictly more cumulative work than the current chain."""
         with self.lock:
             balances, nonces, targets = self.validate_full_chain(blocks)
-            if self.cumulative_work(targets) <= self.cumulative_work(self._targets):
+            current_targets, _ = self.compute_targets(self.blocks)
+            if self.cumulative_work(targets) <= self.cumulative_work(current_targets):
                 return False
             self.blocks = blocks
-            self._targets = targets
             self.balances = balances
             self.nonces = nonces
             self._persist()
@@ -185,8 +190,8 @@ class Blockchain:
         with open(self.data_path) as f:
             raw = json.load(f)
         blocks = [Block.from_dict(d) for d in raw]
-        balances, nonces, targets = self.validate_full_chain(blocks)
-        self.blocks, self._targets, self.balances, self.nonces = blocks, targets, balances, nonces
+        balances, nonces, _ = self.validate_full_chain(blocks)
+        self.blocks, self.balances, self.nonces = blocks, balances, nonces
         return True
 
     def to_dict_list(self) -> list[dict]:

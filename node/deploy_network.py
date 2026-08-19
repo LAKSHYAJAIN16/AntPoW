@@ -21,18 +21,40 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from antchain_node.crypto import Wallet  # noqa: E402
 from antchain_node.rpc import request as rpc_request  # noqa: E402
+from antchain_node.transaction import Transaction  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 NET_DIR = HERE / "data" / "net"
 STATE_FILE = NET_DIR / "network.json"
 
 
-def safe_status(host: str, port: int) -> dict | None:
+def safe_rpc(port: int, msg: dict) -> dict | None:
     try:
-        return rpc_request(host, port, {"type": "get_status"}, timeout=2.0)
+        return rpc_request("127.0.0.1", port, msg, timeout=2.0)
     except OSError:
         return None
+
+
+def safe_status(host: str, port: int) -> dict | None:
+    return safe_rpc(port, {"type": "get_status"})
+
+
+def _require_state() -> dict:
+    state = _load_state()
+    if state is None:
+        print("No network is currently deployed (no state file). Run `start` first.", file=sys.stderr)
+        sys.exit(1)
+    return state
+
+
+def _node_by_index(state: dict, index: int) -> dict:
+    for n in state["nodes"]:
+        if n["index"] == index:
+            return n
+    print(f"error: no node with index {index} (deployed nodes are 0..{len(state['nodes'])-1})", file=sys.stderr)
+    sys.exit(1)
 
 
 def _load_state() -> dict | None:
@@ -141,6 +163,53 @@ def cmd_status(args: argparse.Namespace) -> None:
                   f"tip={st['tip'][:12]}... peers={len(st['peers'])} mempool={st['mempool_size']}")
 
 
+def cmd_balances(args: argparse.Namespace) -> None:
+    state = _require_state()
+    # any reachable node can answer balance queries for any address; try each
+    # node's own port first, falling back to the first reachable node.
+    reachable_port = None
+    for n in state["nodes"]:
+        if safe_status("127.0.0.1", n["port"]) is not None:
+            reachable_port = n["port"]
+            break
+    if reachable_port is None:
+        print("No deployed nodes are reachable (all processes may have exited).", file=sys.stderr)
+        sys.exit(1)
+
+    for n in state["nodes"]:
+        resp = safe_rpc(n["port"], {"type": "get_balance", "address": n["address"]}) or \
+               safe_rpc(reachable_port, {"type": "get_balance", "address": n["address"]})
+        role = "MINER" if n["mining"] else "peer "
+        bal = f"{resp['balance']:.1f}" if resp else "?"
+        print(f"node {n['index']} [{role}] {n['address']}  balance={bal}")
+
+
+def cmd_send(args: argparse.Namespace) -> None:
+    state = _require_state()
+    from_node = _node_by_index(state, args.from_index)
+    to_node = _node_by_index(state, args.to_index)
+    wallet = Wallet.from_dict(json.loads(Path(from_node["wallet"]).read_text()))
+
+    bal_resp = safe_rpc(from_node["port"], {"type": "get_balance", "address": wallet.address})
+    if bal_resp is None:
+        print(f"node {args.from_index} (port {from_node['port']}) is unreachable.", file=sys.stderr)
+        sys.exit(1)
+
+    tx = Transaction(
+        sender=wallet.address, sender_pubkey=wallet.pubkey_hex,
+        recipient=to_node["address"], amount=args.amount, nonce=bal_resp["nonce"],
+    )
+    tx.sign(wallet)
+    result = safe_rpc(from_node["port"], {"type": "submit_tx", "tx": tx.to_dict()})
+    if result and result.get("accepted"):
+        print(f"Sent {args.amount} from node {args.from_index} -> node {args.to_index} "
+              f"(tx {tx.tx_hash[:16]}...). It'll land once a block picks it up -- "
+              f"check with: python deploy_network.py balances")
+    else:
+        print(f"Node rejected the transaction: {result}", file=sys.stderr)
+        sys.exit(1)
+
+
 def cmd_stop(args: argparse.Namespace) -> None:
     state = _load_state()
     if state is None:
@@ -181,6 +250,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     st = sub.add_parser("status", help="Poll all deployed nodes and print a live table")
     st.set_defaults(func=cmd_status)
+
+    ba = sub.add_parser("balances", help="Print every deployed node's own wallet balance")
+    ba.set_defaults(func=cmd_balances)
+
+    se = sub.add_parser("send", help="Send coins from one deployed node's wallet to another, by index")
+    se.add_argument("--from", dest="from_index", type=int, required=True, help="Sender node index (see `status`)")
+    se.add_argument("--to", dest="to_index", type=int, required=True, help="Recipient node index")
+    se.add_argument("--amount", type=float, required=True)
+    se.set_defaults(func=cmd_send)
 
     sp = sub.add_parser("stop", help="Kill all deployed node processes")
     sp.set_defaults(func=cmd_stop)
