@@ -58,6 +58,34 @@ resistance to strategic miners. The central research question is not whether
 ACO can replace PoW, but how much genuine optimization work can be extracted
 from a Nakamoto-style consensus mechanism before its security properties
 degrade below an acceptable bound.
+
+Unlike most proposals in the useful-PoW literature, which stop at a
+theoretical mechanism, we validate this one at three independent levels:
+a fast probabilistic simulator (Python) for broad parameter sweeps, a
+from-scratch high-throughput reimplementation (C++, dependency-free, with
+its own test suite) used to push those sweeps to population and block
+counts the Python version cannot reach in practical time, and a real
+multi-node implementation with actual SHA-256 proof-of-work, real
+ECDSA-signed transactions, and a real TCP gossip network, which we ran
+live and used to catch a genuine consensus bug (Section~\ref{sec:results})
+that neither simulator could have surfaced. Two results emerge that we did
+not expect going in. First, the security claim holds up cleanly and
+independently in every setting tested: naive Proof-of-Optimization forks
+on essentially every block (fork rate $\approx 1.0$) regardless of
+population size or parameter choice, while the hybrid mechanism stays in
+the same low range as plain SHA-PoW. Second, and more surprising, the
+hybrid mechanism's \emph{fairness} claim does not hold up at scale: at 200
+miners under a heavy-tailed hashrate distribution, hybrid's reward
+inequality beyond what hashrate share alone predicts is about as bad as
+pure PoAO's, not close to SHA-PoW's as hypothesized. We trace this to a
+previously unremarked failure mode distinct from the ones the mechanism
+was designed against: the quality \emph{eligibility gate itself} --- not
+the hash lottery, and not $\lambda$ --- structurally excludes low-hashrate
+miners from ever competing, because search budget scales with hashrate
+share and the long tail never accumulates enough of it to clear the gate.
+This reframes the open design question from ``how do we tune $\lambda$''
+to ``how do we allocate search budget so eligibility itself stays
+work-proportional,'' which we pose as the paper's main open problem.
 \end{abstract}
 
 \tableofcontents
@@ -509,6 +537,145 @@ arguably more interesting, negative result about the limits of ``useful
 Proof-of-Work'' as a category.
 
 % ==========================================================================
+\section{Empirical results and validation}
+\label{sec:results}
+% ==========================================================================
+
+Sections~\ref{sec:mechanism}--\ref{sec:experiment} describe a mechanism and
+a protocol for testing it. This section reports what actually happened when
+we ran that protocol, at three independent levels of implementation, and
+what those results changed about the paper's claims relative to what we
+expected going in.
+
+\subsection{Three independent implementations}
+\label{sec:implementations}
+
+Most useful-PoW proposals stop at a simulated or purely theoretical
+mechanism. We built three:
+
+\begin{enumerate}[nosep]
+\item \textbf{Python simulator} (\texttt{sim/}) --- a fast, probabilistic
+discrete-tick model of the mining round (Section~\ref{sec:experiment}),
+used for the initial hypothesis tests and parameter sweeps in
+Sections~\ref{sec:mechanism-quality-check}--\ref{sec:eligibility-gate}.
+\item \textbf{C++ simulator} (\texttt{cpp/}) --- a from-scratch,
+dependency-free reimplementation of the identical mechanism and metrics,
+with its own assert-based test suite, built purely for throughput: six full
+conditions (SHA-PoW, pure PoAO, hybrid $\times$ four $\lambda$ values) at
+200 miners and 2{,}000 blocks each run in about 25 seconds, versus minutes
+for a far smaller Python run. This is what let us push population size up
+to 200 miners and catch the effect in Section~\ref{sec:eligibility-gate},
+which a 30-miner run does not surface.
+\item \textbf{Real multi-node implementation} (\texttt{node/}) --- actual
+SHA-256 proof-of-work over real block headers, real ECDSA (secp256k1)
+signed transactions, a real TCP gossip network, and a persisted,
+independently-revalidated chain per node. Not a simulation of the
+mechanism; an implementation of it, runnable as a live multi-process
+network on one machine or a LAN.
+\end{enumerate}
+
+Building the third one caught a bug the first two structurally could not
+have: the live single-block mining path and the full-chain catch-up path
+(triggered when a node falls behind and must revalidate a peer's chain
+wholesale) computed difficulty retargeting two different ways, so a node
+that fell behind would recompute different, incompatible targets for its
+own already-valid history and get permanently stuck rejecting the correct
+chain. Neither simulator models a catch-up code path at all --- they
+approximate forks statistically, via a propagation-delay window, rather
+than by having two independently-running implementations of the validation
+logic actually disagree with each other. This is, we think, a real
+methodological point for useful-PoW research generally: a mechanism that
+looks correct in a probabilistic simulator can still hide consensus bugs
+that only a live network with genuinely concurrent, independently-acting
+nodes will surface.
+
+\subsection{Fork rate: the security claim holds, independently, everywhere}
+\label{sec:mechanism-quality-check}
+
+Across every configuration we tested --- Python and C++, 20 to 200 miners,
+quality-gate looseness $t_{\text{opt\_frac}} \in \{1.02, ..., 1.20\}$,
+$\lambda \in \{0.5, ..., 10\}$ --- pure PoAO's fork rate was $\approx 1.0$:
+essentially every block had a competing valid block found within the
+propagation window, because many miners cross the quality threshold at
+close to the same moment and there is no mechanism left to break the tie
+cleanly. The hybrid mechanism's fork rate stayed in the same low range as
+plain SHA-PoW in every one of these runs (roughly 0.05--0.15 in the 20--30
+miner Python sweeps, 0.06--0.09 at 200 miners in C++, against SHA-PoW's
+0.08--0.18). This is Hypothesis 1 from Section~\ref{sec:experiment},
+and it is the one prediction that came back exactly as expected, robustly,
+at every scale we could test. Gating the hash lottery behind quality rather
+than replacing it with quality is doing real work here.
+
+\subsection{Useful work per joule: why the metric needed fixing first}
+\label{sec:energy-metric}
+
+An early pass at the useful-optimization-per-joule metric (energy proxy
+$=$ total hash attempts $+$ total ACO iterations, unweighted) showed hybrid
+recovering only 1--5\% of pure PoAO's useful work even when hybrid miners
+were given 85\% of their compute budget for search. That number is an
+artifact, not a finding: one \texttt{hashlib.sha256()} evaluation and one
+ACO iteration are not remotely comparable operations. We measured this
+directly (a $\sim$200-byte header hash vs.\ one \texttt{AntColonyOptimizer}
+iteration at $n_{\text{cities}}=16$, $n_{\text{ants}}=12$, on the same
+machine) and found one ACO iteration costs approximately \textbf{1{,}671
+times} one hash attempt. Reweighting the energy proxy by this ratio ---
+rather than counting both as one undifferentiated ``operation'' --- changed
+the useful-work-per-joule numbers by roughly two orders of magnitude and
+recovered a genuinely interpretable result: hybrid recovers roughly
+14--64\% of pure PoAO's useful-work-per-joule depending on
+$(t_{\text{opt\_frac}}, \text{search fraction})$ in the Python sweep
+(\texttt{results/sweep.csv}), and roughly 41--45\% at 200 miners in the C++
+run (\texttt{results/cpp\_summary.csv}) --- landing inside the paper's
+originally targeted 20--50\% band (Hypothesis 3) for a non-trivial range of
+configurations, though not uniformly across all of them. We flag this
+explicitly because it generalizes: any comparative energy-efficiency claim
+about a useful-PoW mechanism that mixes heterogeneous compute operations
+into one ``energy'' number needs an empirically measured cost ratio, not an
+assumed one, or the result is not measuring what it claims to measure.
+
+\subsection{The eligibility-gate exclusion effect}
+\label{sec:eligibility-gate}
+
+The result we did not expect: at 200 miners under a heavy-tailed
+(Pareto, $\alpha=1.5$) hashrate distribution, hybrid's Gini-excess (reward
+Gini minus hashrate-share Gini, i.e.\ inequality beyond what hashrate share
+alone predicts) was $\approx 0.37$--$0.38$ across every $\lambda$ tested ---
+essentially indistinguishable from pure PoAO's $\approx 0.39$, and far from
+SHA-PoW's $\approx 0.10$ (\texttt{results/cpp\_summary.csv}). Hypothesis 2
+predicted a monotonic trade-off in $\lambda$ between SHA-PoW-like and
+pure-PoAO-like fairness; what we observed instead was hybrid's fairness
+pinned near pure PoAO's \emph{regardless} of $\lambda$, at this population
+size.
+
+The mechanism is not the one Section~\ref{sec:security} was written to
+guard against. Property~\ref{prop:bounded} bounds how much a
+\emph{winning} solution's quality can bias the hash lottery, and that bound
+holds throughout. But a miner's ACO search budget in our implementation is
+$\propto$ hashrate share (a design choice, not a protocol requirement): a
+miner with a small hashrate share gets proportionally few ACO iterations
+per block, and under a heavy tail, most miners' shares are small enough
+that they never accumulate enough search budget to produce a tour that
+clears the quality gate $T_{\text{opt}}$ \emph{at all}, in any block, before
+someone else wins. They are excluded from the lottery entirely, not
+out-competed within it. Because this exclusion happens before the hash
+lottery ever runs, no value of $\lambda$ --- which only reweights targets
+for miners who already cleared the gate --- can fix it.
+
+This is a distinct failure mode from the three enumerated in
+Section~\ref{sec:security} (private knowledge, pheromone memory, strategic
+withholding), and we did not anticipate it until the C++ implementation
+made a 200-miner sweep practical; it is invisible at the 20--30 miner scale
+of the original Python experiments, where most miners' shares are large
+enough relative to the population to clear a loose quality gate
+comfortably. We do not have a fix validated in this paper --- decoupling
+search-budget allocation from hashrate share (e.g.\ a flat per-miner
+minimum ACO budget, subsidized by the protocol rather than proportional to
+stake) is the natural next thing to try, but changes the mechanism's
+threat model (a minimum guaranteed budget is also a minimum guaranteed
+attack surface for a Sybil that splits into many low-hashrate identities)
+and is left as the paper's main open problem rather than a claimed result.
+
+% ==========================================================================
 \section{Discussion}
 % ==========================================================================
 
@@ -529,7 +696,13 @@ $\mathrm{Gen}$ can be biased toward instances with real-world value (e.g.
 actual vehicle-routing or logistics problems submitted by third parties)
 without reopening the private-information attack surface; (3) long-run
 dynamics if $\lambda$ itself becomes a governance parameter subject to miner
-voting, which could reintroduce strategic manipulation at a meta level.
+voting, which could reintroduce strategic manipulation at a meta level; and,
+now the paper's central open problem following Section~\ref{sec:eligibility-gate},
+(4) how to allocate ACO search budget so that the quality-eligibility gate
+itself stays approximately work-proportional at realistic (heavy-tailed,
+large-$N$) hashrate distributions, rather than proportional-to-hashrate
+allocation structurally excluding the long tail of small miners from ever
+competing regardless of $\lambda$.
 
 % ==========================================================================
 \section{Conclusion}
@@ -538,14 +711,34 @@ voting, which could reintroduce strategic manipulation at a meta level.
 Ant Colony Optimization cannot safely replace the hash lottery at the core of
 Nakamoto consensus, because pheromone-mediated search has memory and
 instance-dependent structure that a memoryless hash function specifically
-lacks --- the same failure mode that has sunk prior useful-PoW proposals.
-Embedding ACO search as a bounded, quality-weighted re-weighting of a
-conventional hash lottery, rather than as its replacement, preserves the
-lottery's work-proportionality to a quantifiable degree governed by a single
-protocol parameter $\lambda$, while directing a tunable share of network
-compute toward a genuinely useful byproduct. The companion simulation
-(described in Section~\ref{sec:experiment} and implemented separately) is
-designed to locate, empirically, whether a useful region of $\lambda$ exists.
+lacks --- the same failure mode that has sunk prior useful-PoW proposals. We
+did not just argue this; we measured it, at three independent
+implementation levels, and it held up cleanly and repeatedly: pure PoAO's
+fork rate stayed at $\approx 1.0$ regardless of population size, quality
+threshold, or $\lambda$, while gating (rather than replacing) the hash
+lottery with quality kept the hybrid mechanism's fork rate in SHA-PoW's
+range throughout (Section~\ref{sec:mechanism-quality-check}). Embedding ACO
+search as a bounded, quality-weighted re-weighting of a conventional hash
+lottery preserves the lottery's work-proportionality to a quantifiable
+degree governed by $\lambda$ (Property~\ref{prop:bounded}), and, once the
+energy-accounting metric was corrected to reflect real relative compute
+costs rather than raw operation counts, recovers a genuinely substantial
+fraction --- 14--64\% in our experiments, depending on calibration --- of
+pure PoAO's useful-optimization-per-joule (Section~\ref{sec:energy-metric}).
+
+That is the paper's positive result. It comes with a genuine limitation we
+did not anticipate going in: at larger, more realistic population sizes,
+the mechanism's fairness claim does not hold up the way its security claim
+does. The failure mode is not one Property~\ref{prop:bounded} was built to
+prevent -- it is upstream of the hash lottery entirely, in how ACO search
+budget gets allocated before the quality gate is even checked
+(Section~\ref{sec:eligibility-gate}). We think this is a more useful
+contribution than a clean positive result alone would have been: it
+identifies, with a concrete mechanism and reproducible measurement, exactly
+where a useful-PoW design's fairness guarantee actually breaks, which is
+the question any successor mechanism -- ACO-based or otherwise -- has to
+answer before ``useful Proof-of-Work'' can be more than a mechanism that
+works at small scale.
 
 \bibliographystyle{plain}
 \begin{thebibliography}{9}

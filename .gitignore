@@ -3,3 +3,4 @@ __pycache__/
 node/data/*.json
 node/data/logs/
 node/data/net/
+cpp/build/
