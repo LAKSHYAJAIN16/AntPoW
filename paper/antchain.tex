@@ -1,6 +1,5 @@
-\documentclass[11pt]{article}
+\documentclass[journal]{IEEEtran}
 
-\usepackage[margin=1in]{geometry}
 \usepackage{amsmath,amssymb,amsthm}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
@@ -9,18 +8,16 @@
 \usepackage{hyperref}
 \usepackage{xcolor}
 \usepackage{listings}
-\usepackage{caption}
 \usepackage{enumitem}
 
-\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
+\hypersetup{hidelinks}
 
 \newtheorem{definition}{Definition}
 \newtheorem{property}{Property}
 \newtheorem{hypothesis}{Hypothesis}
 
 \title{AntChain: Useful Proof-of-Work via Distributed\\Ant Colony Optimization}
-\author{Draft technical specification}
-\date{\today}
+\author{Draft Technical Specification}
 
 \begin{document}
 \maketitle
@@ -88,7 +85,9 @@ to ``how do we allocate search budget so eligibility itself stays
 work-proportional,'' which we pose as the paper's main open problem.
 \end{abstract}
 
-\tableofcontents
+\begin{IEEEkeywords}
+Proof-of-Work, useful Proof-of-Work, Ant Colony Optimization, Nakamoto consensus, Traveling Salesman Problem, blockchain security.
+\end{IEEEkeywords}
 
 % ==========================================================================
 \section{Introduction}
@@ -740,7 +739,6 @@ the question any successor mechanism -- ACO-based or otherwise -- has to
 answer before ``useful Proof-of-Work'' can be more than a mechanism that
 works at small scale.
 
-\bibliographystyle{plain}
 \begin{thebibliography}{9}
 
 \bibitem{nakamoto2008}
