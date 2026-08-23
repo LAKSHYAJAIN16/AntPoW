@@ -50,11 +50,15 @@ export async function POST(request: Request) {
   const outputDir = path.join(repositoryRoot, "web", "results", runId);
   try {
     await mkdir(outputDir, { recursive: true });
-    const executable = process.platform === "win32" ? path.join(buildRoot, "Release", "antchain_experiment.exe") : path.join(buildRoot, "antchain_experiment");
-    if (!existsSync(executable)) {
+    const executableName = process.platform === "win32" ? "antchain_experiment.exe" : "antchain_experiment";
+    const executablePaths = [path.join(buildRoot, "Release", executableName), path.join(buildRoot, executableName)];
+    let executable = executablePaths.find(existsSync);
+    if (!executable) {
       await command("cmake", ["-B", "build", "-DCMAKE_BUILD_TYPE=Release"], cppRoot);
       await command("cmake", ["--build", "build", "--config", "Release"], cppRoot);
+      executable = executablePaths.find(existsSync);
     }
+    if (!executable) throw new Error("CMake completed but the AntChain experiment executable was not found.");
     const args = ["--miners", String(input.miners), "--blocks", String(input.blocks), "--cities", String(input.cities), "--max-ticks", String(input.maxTicks), "--strategic-fraction", String(input.strategicFraction), "--seed", String(input.seed), "--outdir", outputDir, "--lambdas", ...input.lambdas.map(String)];
     const { stdout, stderr } = await command(executable, args, cppRoot);
     const summary = parseCsv(await readFile(path.join(outputDir, "cpp_summary.csv"), "utf8"));
