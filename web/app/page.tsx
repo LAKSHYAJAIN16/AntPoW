@@ -37,7 +37,7 @@ export default function Workbench() {
   }
 
   return <main>
-    <header className="masthead"><div className="brand"><span className="ant-mark" aria-hidden="true">⌁</span><div><p>AntChain / C++ research simulator</p><h1>Experiment workbench</h1></div></div><div className="mast-actions"><nav aria-label="Primary navigation"><Link href="/" aria-current="page">Workbench</Link><Link href="/how-it-works">How it works</Link></nav><span className="status"><i /> Local execution</span></div></header>
+    <header className="masthead"><div className="brand"><span className="ant-mark" aria-hidden="true">⌁</span><div><p>AntChain / C++ research simulator</p><h1>Experiment workbench</h1></div></div><div className="mast-actions"><nav aria-label="Primary navigation"><Link href="/" aria-current="page">Workbench</Link><Link href="/how-it-works">How it works</Link><Link href="/network">Live network</Link></nav><span className="status"><i /> Local execution</span></div></header>
     <section className="intro"><p className="kicker">Useful proof-of-work, inspected</p><h2>Measure the trade-off between optimization, fairness, and consensus stability.</h2><p>Configure an experiment, then compile and run the dependency-free C++ simulator on this machine. Results stay local and are written under <code>web/results</code>.</p></section>
     <div className="workspace">
       <form className="bench" onSubmit={run}>
