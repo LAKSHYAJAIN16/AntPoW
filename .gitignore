@@ -4,3 +4,4 @@ node/data/*.json
 node/data/logs/
 node/data/net/
 cpp/build/
+cpp_node/build/
