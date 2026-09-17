@@ -4,27 +4,46 @@ Research project exploring whether Ant Colony Optimization (ACO) can be
 embedded inside Bitcoin-style Proof-of-Work without breaking the security
 properties a memoryless hash lottery provides.
 
-There are two implementations here, for two different purposes:
+There are two implementations of each half of the project — a Python version
+and a faster/standalone C++ version:
 
-- **`sim/`** — a fast *research simulator*. Probabilistic mining, thousands
-  of blocks in seconds, built to answer "does this mechanism have good
+- **`sim/`** (Python) / **`cpp/`** (C++17, dependency-free) — a fast
+  *research simulator*. Probabilistic mining, thousands of blocks in
+  seconds, built to answer "does this mechanism have good
   security/fairness/efficiency properties across many parameter settings."
-  Not runnable as an actual currency.
-- **`node/`** — a real, runnable, multi-node *toy cryptocurrency*: real
-  SHA-256 mining, real ECDSA-signed transactions, a real TCP gossip network,
-  a persisted chain. Built to show the mechanism actually working end to
-  end, on however many local/LAN nodes you start. See
-  [`node/README.md`](node/README.md) for installation and usage — start
-  there if you want to run it, not just read about it.
+  Not runnable as an actual currency. The C++ version implements the same
+  mechanism/metrics purely for throughput at large miner/block counts — see
+  [`cpp/README.md`](cpp/README.md).
+- **`node/`** (Python) / **`cpp_node/`** (C++17) — a real, runnable,
+  multi-node *toy cryptocurrency*: real proof-of-work mining, real
+  signed transactions, a real TCP gossip network, a persisted chain. Built
+  to show the mechanism actually working end to end, on however many
+  local/LAN nodes you start. The two node implementations are **not**
+  wire-compatible (different hash/signature primitives) — see
+  [`node/README.md`](node/README.md) and [`cpp_node/README.md`](cpp_node/README.md)
+  for installation and usage — start there if you want to run it, not just
+  read about it.
+- **`web/`** — a local Next.js workbench (`antchain-workbench`) that builds
+  and drives the C++ simulator from a browser UI instead of the command
+  line: pick parameters, run the experiment, inspect the resulting
+  condition summary. See [`web/README.md`](web/README.md).
 
 ## Layout
 
 ```
 paper/
-  antchain.tex        LaTeX spec: mechanism design + security analysis
-                       + experimental protocol. Compile with pdflatex
-                       (requires a LaTeX distribution such as MiKTeX/TeX Live,
-                       not installed in this environment).
+  antchain.tex          IEEEtran (journal) version: mechanism design +
+                         security analysis + experimental protocol.
+  antchain_neurips.tex  Same paper, typeset against the official NeurIPS
+                         2024 style file instead. Content is identical to
+                         antchain.tex; only the document class/preamble
+                         differ.
+  neurips_2024.sty      Official NeurIPS style file (vendored, unmodified),
+                         required to compile antchain_neurips.tex.
+                       Compile either with pdflatex (requires a LaTeX
+                       distribution such as MiKTeX/TeX Live). Both files are
+                       verified to compile cleanly (two pdflatex passes,
+                       zero errors/warnings) as of the last update.
 sim/
   antchain_sim/        Simulation package
     tsp.py             Deterministic instance generation, tour eval, ACO solver
@@ -41,6 +60,12 @@ node/
     crypto.py, transaction.py, tsp.py, block.py, consensus.py,
     chain.py, mempool.py, miner.py, network.py, node.py, cli.py
   requirements.txt
+cpp/                   C++17 twin of sim/ (see cpp/README.md)
+  include/, src/, tests/, CMakeLists.txt
+cpp_node/               C++17 twin of node/ (see cpp_node/README.md)
+  include/, src/, tests/, third_party/ (vendored Monocypher), CMakeLists.txt
+web/                   Next.js workbench that drives cpp/ from a browser UI
+  app/, package.json (see web/README.md)
 results/
   summary.csv          Per-condition metric summary (written by run_experiment.py)
   blocks.csv           Per-block raw data
