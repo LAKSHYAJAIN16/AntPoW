@@ -1,32 +1,33 @@
 # AntChain: Useful Proof-of-Work via Distributed Ant Colony Optimization
 
-Research project exploring whether Ant Colony Optimization (ACO) can be
-embedded inside Bitcoin-style Proof-of-Work without breaking the security
-properties a memoryless hash lottery provides.
+I wanted to know if you could embed Ant Colony Optimization inside
+Bitcoin-style Proof-of-Work without wrecking the security properties you
+get from a plain memoryless hash lottery. This is the research project
+that came out of chasing that question.
 
-There are two implementations of each half of the project — a Python version
-and a faster/standalone C++ version:
+There are two halves to it, and I built each one twice — once in Python,
+once in C++ for speed:
 
 - **`sim/`** (Python) / **`cpp/`** (C++17, dependency-free) — a fast
-  *research simulator*. Probabilistic mining, thousands of blocks in
-  seconds, built to answer "does this mechanism have good
-  security/fairness/efficiency properties across many parameter settings."
-  Not runnable as an actual currency. The C++ version implements the same
-  mechanism/metrics purely for throughput at large miner/block counts — see
-  [`cpp/README.md`](cpp/README.md).
+  research simulator. Probabilistic mining, thousands of blocks in
+  seconds, built to answer "does this mechanism actually have good
+  security/fairness/efficiency properties across a lot of parameter
+  settings?" Not runnable as a real currency — the C++ version just
+  implements the same mechanism and metrics for raw throughput at large
+  miner/block counts. See [`cpp/README.md`](cpp/README.md).
 - **`node/`** (Python) / **`cpp_node/`** (C++17) — a real, runnable,
-  multi-node *toy cryptocurrency*: real proof-of-work mining, real
-  signed transactions, a real TCP gossip network, a persisted chain. Built
-  to show the mechanism actually working end to end, on however many
-  local/LAN nodes you start. The two node implementations are **not**
-  wire-compatible (different hash/signature primitives) — see
-  [`node/README.md`](node/README.md) and [`cpp_node/README.md`](cpp_node/README.md)
-  for installation and usage — start there if you want to run it, not just
-  read about it.
-- **`web/`** — a local Next.js workbench (`antchain-workbench`) that builds
-  and drives the C++ simulator from a browser UI instead of the command
-  line: pick parameters, run the experiment, inspect the resulting
-  condition summary. See [`web/README.md`](web/README.md).
+  multi-node toy cryptocurrency: actual proof-of-work mining, actual
+  signed transactions, a real TCP gossip network, a persisted chain. This
+  is me proving the mechanism works end to end on however many local/LAN
+  nodes you spin up. Heads up: the two node implementations aren't
+  wire-compatible with each other (different hash/signature primitives) —
+  see [`node/README.md`](node/README.md) and
+  [`cpp_node/README.md`](cpp_node/README.md) if you want to actually run
+  one.
+- **`web/`** — a local Next.js workbench (`antchain-workbench`) that
+  builds and drives the C++ simulator from a browser instead of the
+  command line: pick parameters, run the experiment, look at the results.
+  See [`web/README.md`](web/README.md).
 
 ## Layout
 
@@ -41,9 +42,9 @@ paper/
   neurips_2024.sty      Official NeurIPS style file (vendored, unmodified),
                          required to compile antchain_neurips.tex.
                        Compile either with pdflatex (requires a LaTeX
-                       distribution such as MiKTeX/TeX Live). Both files are
-                       verified to compile cleanly (two pdflatex passes,
-                       zero errors/warnings) as of the last update.
+                       distribution such as MiKTeX/TeX Live). Both files
+                       compile cleanly (two pdflatex passes, zero
+                       errors/warnings) as of the last update.
 sim/
   antchain_sim/        Simulation package
     tsp.py             Deterministic instance generation, tour eval, ACO solver
@@ -89,33 +90,35 @@ comparison plots.
 ## What the simulation implements
 
 Three consensus mechanisms, on one shared code path so miner heterogeneity
-and metrics are directly comparable (see `paper/antchain.tex` Section 5 for
-the full experimental design):
+and metrics are directly comparable (full experimental design's in
+`paper/antchain.tex` Section 5):
 
-- **sha_pow** — baseline memoryless hash lottery, no optimization component.
-- **pure_poao** — naive mechanism where the first miner to reach a quality
-  threshold wins outright (no hash lottery). Expected to show high reward
-  inequality and strategic-miner advantage, per the paper's Section 2.3
-  negative result.
-- **hybrid** — the paper's PoW+PoAO mechanism (Section 3): a per-block TSP
-  instance derived from the previous block hash gates and quality-weights a
-  hash lottery via `T(x) = T0 * (1 + lambda * (f_old - f(x)) / f_old)`,
-  swept over `lambda`.
+- **sha_pow** — the baseline: memoryless hash lottery, no optimization
+  component.
+- **pure_poao** — a naive mechanism where the first miner to hit a quality
+  threshold just wins outright, no hash lottery at all. I expected this to
+  show high reward inequality and a strategic-miner advantage, and it
+  does — that's the negative result in the paper's Section 2.3.
+- **hybrid** — the actual PoW+PoAO mechanism from Section 3: a per-block
+  TSP instance derived from the previous block hash gates and
+  quality-weights a hash lottery via
+  `T(x) = T0 * (1 + lambda * (f_old - f(x)) / f_old)`, swept over
+  `lambda`.
 
-Metrics collected per condition: fork rate, block-time variance, Gini
-coefficient of block rewards (vs. Gini of hashrate as the fairness
-baseline), strategic-miner advantage (reward share / hashrate share for
-pheromone-hoarding and withholding miners), total compute expenditure, and
-useful optimization produced per unit compute.
+Metrics I collect per condition: fork rate, block-time variance, Gini
+coefficient of block rewards (against Gini of hashrate as the fairness
+baseline), strategic-miner advantage (reward share over hashrate share for
+pheromone-hoarding and withholding miners), total compute spent, and
+useful optimization produced per unit of compute.
 
-## Calibration note
+## A calibration gotcha
 
-Default parameters (`search_iters_per_tick=20`, `hybrid_search_fraction=0.35`,
-`n_cities=16`) were tuned so that ACO search has enough budget per block to
-meaningfully beat the nearest-neighbor reference tour at least some of the
-time — otherwise `lambda` has no visible effect on block time (quality never
-exceeds the reference, so the hash target never actually gets easier). If you
-change `n_cities`, `max_ticks`, or population size, re-check that
-`blocks.csv`'s `f_winner` is sometimes meaningfully below `f_reference` for
-the hybrid condition; if it never is, increase `search_iters_per_tick` or
-`max_ticks`.
+I tuned the defaults (`search_iters_per_tick=20`,
+`hybrid_search_fraction=0.35`, `n_cities=16`) so ACO search has enough
+budget per block to actually beat the nearest-neighbor reference tour some
+of the time — otherwise `lambda` does nothing visible to block time,
+because quality never beats the reference and the hash target never
+actually gets easier. If you change `n_cities`, `max_ticks`, or population
+size, double check `blocks.csv`'s `f_winner` is sometimes meaningfully
+below `f_reference` for the hybrid condition. If it never is, bump up
+`search_iters_per_tick` or `max_ticks`.
