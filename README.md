@@ -1,8 +1,6 @@
 # AntChain: Useful Proof-of-Work via Distributed Ant Colony Optimization
 
-> Can you embed Ant Colony Optimization inside Bitcoin-style PoW without wrecking its security properties?
-
-That's the question this research project chases. There are two halves, each built twice — once in Python, once in C++ for speed.
+AntChain replaces Bitcoin's memoryless hash lottery with one weighted by a per-block Traveling Salesman instance, so mining work doubles as Ant Colony Optimization search instead of pure waste heat — the question being whether that holds up without wrecking PoW's security properties. There are two halves, each built twice — once in Python, once in C++ for speed.
 
 - **`sim/`** (Python) / **`cpp/`** (C++17) — fast research simulator, thousands of blocks in seconds, for testing security/fairness/efficiency across parameter sweeps. Not a real currency. See [`cpp/README.md`](cpp/README.md).
 - **`node/`** (Python) / **`cpp_node/`** (C++17) — a real, runnable multi-node toy cryptocurrency: PoW mining, signed transactions, TCP gossip, persisted chain. The two aren't wire-compatible with each other. See [`node/README.md`](node/README.md) and [`cpp_node/README.md`](cpp_node/README.md).
